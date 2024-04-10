@@ -4,6 +4,12 @@ A straightforward implementation of [RandAugment](https://arxiv.org/pdf/1909.137
 
 Tested using `albumentations==1.4.3`.
 
+## Install
+
+```shell
+pip install git+https://github.com/tobiasvanderwerff/randaugment.git
+```
+
 ## Example usage
 
 See `demo.ipynb` for an interactive demo.
@@ -23,6 +29,7 @@ img_augmented = transform(image=image)['image']
 ### Example 2: Images + bounding boxes
 
 ```python
+from randaugment import RandAugment
 
 image = ...  # your image here
 bboxes = ... # your bboxes here
@@ -42,6 +49,8 @@ bboxes_augmented = transformed["bboxes"]
 ### Example 3: Sample transforms manually
 
 ```python
-randaug = RandAugment(num_transforms=3, magnitude=3)
+from randaugment import RandAugment
+
+randaug = RandAugment()
 transforms = randaug.sample_transforms()
 ```

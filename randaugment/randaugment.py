@@ -1,9 +1,9 @@
 import random
+import logging
 from typing import Any, Dict, List
 
 import numpy as np
 import albumentations as A
-
 
 class RandAugment(A.BaseCompose):
     """
@@ -12,10 +12,12 @@ class RandAugment(A.BaseCompose):
     Args:
         num_transforms (int): Number of transforms to apply. Default: 3.
         magnitude (int): Magnitude of each transform (0 to 10). Default: 3.
+        max_tries (int): Maximum number of times to try applying the transforms. Default: 10.
         p (float): Probability of applying the transform. Default: 1.0.
     """
 
-    def __init__(self, num_transforms: int = 3, magnitude: int = 3, p: float = 1.0):
+    def __init__(self, num_transforms: int = 3, magnitude: int = 3, 
+                 max_tries: int = 10, p: float = 1.0):
         assert 0 <= magnitude <= 10, "Magnitude must be between 0 and 10."
 
         super().__init__(randaugment_transforms(magnitude), p)
@@ -26,12 +28,27 @@ class RandAugment(A.BaseCompose):
 
         self.num_transforms = num_transforms
         self.magnitude = magnitude
+        self.max_tries = max_tries
+
+        self.logger = logging.getLogger(__name__)
 
     def __call__(self, *arg: Any, force_apply: bool = False, **data: Any) -> Dict[str, Any]:
         if force_apply or random.random() < self.p:
             transforms = self.sample_transforms()
-            for t in transforms:
-                data = t(force_apply=True, **data)
+
+            # Sometimes certain transform combinations fail, so we try a few times
+            for _ in range(self.max_tries):
+                try:
+                    return self._apply_transforms(transforms, **data)
+                except TypeError as e:
+                    self.logger.warn(f"RandAugment failed: {e}. Trying again...")
+            raise RuntimeError("RandAugment failed too many times.")
+
+        return data
+
+    def _apply_transforms(self, transforms, **data):
+        for t in transforms:
+            data = t(force_apply=True, **data)
         return data
 
     def sample_transforms(self) -> List[A.BasicTransform]:
